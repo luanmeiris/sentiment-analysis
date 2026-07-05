@@ -6,6 +6,7 @@ from deep_translator import GoogleTranslator
 from wordcloud import WordCloud
 import matplotlib.pyplot as plt
 import nltk
+from xquik_export import load_xquik_texts
 
 # Initial Configurations
 nltk.download('punkt_tab')
@@ -35,8 +36,10 @@ if st.sidebar.button("Run Robust Analysis"):
     if upload:
         try:
             df_input = pd.read_csv(upload) if upload.name.endswith('csv') else pd.read_excel(upload)
-            # Assuming data is in the first column
-            data = df_input.iloc[:, 0].astype(str).tolist()
+            data = load_xquik_texts(df_input)
+            if not data:
+                # Fall back to the first column for generic CSV files.
+                data = df_input.iloc[:, 0].dropna().astype(str).str.strip().tolist()
         except Exception as e:
             st.error(f"Error reading file: {e}")
     elif text_input:
@@ -62,11 +65,11 @@ if st.sidebar.button("Run Robust Analysis"):
                     sent = "Negative"
                 else: 
                     sent = "Neutral"
-                
+
                 results.append({"Original Text": f, "Sentiment": sent, "Score": pol})
                 progress_bar.progress((i + 1) / len(data))
-            except:
-                continue
+            except Exception as exc:
+                st.warning(f"Skipped row {i+1}: {exc}")
         
         st.session_state.df_resultado = pd.DataFrame(results)
         status_text.success("Analysis completed successfully!")
